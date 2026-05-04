@@ -2,14 +2,17 @@ workflows:
   ios-workflow:
     name: iOS Build
     max_build_duration: 60
+
     environment:
       flutter: stable
       xcode: latest
+
     scripts:
       - name: Set up Flutter
         script: |
           cd app/healthkit
           flutter pub get
+
       - name: Build iOS
         script: |
           cd app/healthkit
