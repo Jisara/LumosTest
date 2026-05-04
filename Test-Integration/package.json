@@ -1,0 +1,22 @@
+{
+  "name": "healthkit-realtime-sync",
+  "version": "2.0.0",
+  "description": "Real-time Apple HealthKit data sync from iOS to web dashboard",
+  "main": "server-realtime.js",
+  "scripts": {
+    "start": "node server-realtime.js",
+    "dev": "node server-realtime.js",
+    "server": "node server-realtime.js"
+  },
+  "keywords": ["healthkit", "health", "dashboard", "apple", "realtime", "websocket", "ios"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "ws": "^8.13.0"
+  }
+}

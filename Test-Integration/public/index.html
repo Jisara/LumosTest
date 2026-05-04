@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthKit Real-time Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #ff5722;
+      --secondary: #4a90e2;
+      --accent: #50e3c2;
+      --dark: #1a1a2e;
+      --card-bg: #16213e;
+      --text-primary: #eaeaea;
+      --text-secondary: #a8a8a8;
+      --border: #2d3561;
+      --success: #50e3c2;
+      --warning: #ffa726;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, var(--dark) 0%, #0f3460 100%);
+      color: var(--text-primary);
+    }
+
+    .dashboard {
+      min-height: 100vh;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, var(--dark) 0%, #0f3460 100%);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 50px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .header-left h1 {
+      font-size: 3em;
+      font-weight: 800;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -1px;
+    }
+
+    .header-left p {
+      font-size: 1.1em;
+      color: var(--text-secondary);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.disconnected {
+      background: #ff6b6b;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .status-text .label {
+      font-size: 0.8em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-text .value {
+      font-size: 0.95em;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Real-time Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, var(--card-bg) 0%, rgba(42, 57, 96, 0.5) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255, 87, 34, 0.1) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--secondary);
+      box-shadow: 0 20px 40px rgba(74, 144, 226, 0.2);
+    }
+
+    .metric-card.updated {
+      animation: cardUpdate 0.6s ease;
+    }
+
+    @keyframes cardUpdate {
+      0% { box-shadow: 0 0 0 rgba(80, 227, 194, 0.5); }
+      50% { box-shadow: 0 0 20px rgba(80, 227, 194, 0.5); }
+      100% { box-shadow: 0 0 0 rgba(80, 227, 194, 0); }
+    }
+
+    .metric-icon {
+      flex-shrink: 0;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.8em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .metric-content {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .metric-label {
+      font-size: 0.9em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .metric-value {
+      font-size: 2em;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.2;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .metric-unit {
+      font-size: 0.5em;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .metric-trend {
+      font-size: 0.75em;
+      color: var(--accent);
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    .metric-trend.negative {
+      color: #ff6b6b;
+    }
+
+    /* Sync History */
+    .sync-history {
+      background: linear-gradient(135deg, var(--card-bg) 0%, rgba(42, 57, 96, 0.5) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    .sync-history h3 {
+      font-size: 1.2em;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+    }
+
+    .sync-log {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .sync-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: rgba(80, 227, 194, 0.05);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      font-size: 0.9em;
+    }
+
+    .sync-entry .time {
+      color: var(--accent);
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+    }
+
+    .sync-entry .info {
+      color: var(--text-secondary);
+      flex: 1;
+      margin-left: 12px;
+    }
+
+    .sync-entry .status {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 4em;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .empty-state h2 {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    /* Loading State */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: var(--text-secondary);
+      gap: 10px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .dashboard {
+        padding: 20px 16px;
+      }
+
+      .header {
+        flex-direction: column;
+      }
+
+      .header-left h1 {
+        font-size: 2em;
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-card {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .metric-content {
+        text-align: center;
+      }
+    }
+
+    /* Scrollbar styling */
+    .sync-log::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sync-log::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .sync-log::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .sync-log::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <div class="container">
+      <div class="header">
+        <div class="header-left">
+          <h1>📊 Health Dashboard</h1>
+          <p>Real-time sync from your iPhone</p>
+        </div>
+        <div class="status-indicator">
+          <div class="status-dot" id="statusDot"></div>
+          <div class="status-text">
+            <div class="label">iPhone Connection</div>
+            <div class="value" id="statusText">Connecting...</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="metricsContainer" class="metrics-grid">
+        <div class="loading">
+          <div class="spinner"></div>
+          Waiting for data from iPhone...
+        </div>
+      </div>
+
+      <div class="sync-history">
+        <h3>📡 Sync History</h3>
+        <div class="sync-log" id="syncLog">
+          <div class="sync-entry">
+            <span class="time">--:--:--</span>
+            <span class="info">Awaiting first sync...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let healthData = {};
+    let syncHistory = [];
+    let lastUpdateTime = {};
+
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('✅ Connected to server');
+        updateConnectionStatus(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+
+          if (message.type === 'initial' || message.type === 'update') {
+            healthData = message.data;
+            updateMetrics();
+            recordSync(message.timestamp);
+          }
+        } catch (error) {
+          console.error('Error processing message:', error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        updateConnectionStatus(false);
+      };
+
+      ws.onclose = () => {
+        console.log('❌ Disconnected from server');
+        updateConnectionStatus(false);
+        // Reconnect after 3 seconds
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    function updateConnectionStatus(connected) {
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+
+      if (connected) {
+        dot.classList.remove('disconnected');
+        text.textContent = 'Connected';
+      } else {
+        dot.classList.add('disconnected');
+        text.textContent = 'Disconnected';
+      }
+    }
+
+    function updateMetrics() {
+      const container = document.getElementById('metricsContainer');
+
+      if (!healthData || Object.values(healthData).every(v => !v || v.length === 0)) {
+        container.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon">⏳</div>
+            <h2>No data yet</h2>
+            <p>Waiting for your iPhone to sync health data...</p>
+          </div>
+        `;
+        return;
+      }
+
+      const metricsHTML = Object.entries(healthData)
+        .filter(([key, values]) => Array.isArray(values) && values.length > 0)
+        .map(([key, values]) => {
+          const latest = values[0];
+          if (!latest || !latest.value) return '';
+
+          const icon = getMetricIcon(key);
+          const label = formatLabel(key);
+          const unit = latest.unit || '';
+          const time = new Date(latest.startDate);
+          const minutesAgo = Math.floor((Date.now() - time) / 1000 / 60);
+          const trend = minutesAgo < 5 ? '🔄 Just now' : `${minutesAgo}m ago`;
+
+          const cardClass = lastUpdateTime[key] === latest.startDate ? 'updated' : '';
+          lastUpdateTime[key] = latest.startDate;
+
+          return `
+            <div class="metric-card ${cardClass}">
+              <div class="metric-icon">${icon}</div>
+              <div class="metric-content">
+                <div class="metric-label">${label}</div>
+                <div class="metric-value">
+                  ${Math.round(latest.value * 100) / 100}
+                  <span class="metric-unit">${unit}</span>
+                </div>
+                <div class="metric-trend">${trend}</div>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      container.innerHTML = metricsHTML || '<div class="empty-state"><p>No metrics available</p></div>';
+    }
+
+    function recordSync(timestamp) {
+      const time = new Date(timestamp);
+      const timeStr = time.toLocaleTimeString();
+
+      syncHistory.unshift({
+        time: timeStr,
+        timestamp: timestamp
+      });
+
+      syncHistory = syncHistory.slice(0, 20); // Keep last 20
+
+      updateSyncLog();
+    }
+
+    function updateSyncLog() {
+      const syncLog = document.getElementById('syncLog');
+
+      const html = syncHistory.map(entry => `
+        <div class="sync-entry">
+          <span class="time">${entry.time}</span>
+          <span class="info">Data synced from iPhone</span>
+          <span class="status">✓</span>
+        </div>
+      `).join('');
+
+      syncLog.innerHTML = html || '<div class="sync-entry"><span class="info">No syncs yet</span></div>';
+    }
+
+    function getMetricIcon(type) {
+      const icons = {
+        steps: '👣',
+        heartRate: '❤️',
+        distance: '🏃',
+        activeEnergy: '🔥',
+        sleep: '🌙',
+        weight: '⚖️',
+        bloodPressure: '📈',
+        workouts: '💪'
+      };
+      return icons[type] || '📊';
+    }
+
+    function formatLabel(key) {
+      return key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
+    }
+
+    // Initialize
+    connectWebSocket();
+
+    // Fallback polling if WebSocket doesn't work
+    setInterval(() => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        fetch('/api/health-data')
+          .then(r => r.json())
+          .then(data => {
+            healthData = data;
+            updateMetrics();
+          })
+          .catch(console.error);
+      }
+    }, 5000);
+  </script>
+</body>
+</html>
