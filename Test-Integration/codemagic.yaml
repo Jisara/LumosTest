@@ -13,4 +13,4 @@ workflows:
       - name: Build iOS
         script: |
           cd app/healthkit
-          flutter build ios --release
+          flutter build ipa --release
