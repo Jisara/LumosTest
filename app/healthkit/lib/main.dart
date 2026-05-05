@@ -29,8 +29,8 @@ class HealthSenderPage extends StatefulWidget {
 class _HealthSenderPageState extends State<HealthSenderPage> {
   final Health health = Health();
 
-  // CHANGE THIS to your Lenovo IPv4 address
-  final String backendUrl = "http://10.0.0.179:3000/health-data";
+  // CHANGE THIS to your Lenovo IPv4 address (server expects POST /api/sync)
+  final String backendUrl = "http://10.0.0.179:3000/api/sync";
 
   String status = "Ready";
 
@@ -78,19 +78,38 @@ class _HealthSenderPageState extends State<HealthSenderPage> {
       );
 
       double? latestHeartRate;
+      DateTime? latestHeartRateDate;
 
       if (heartRateData.isNotEmpty) {
         heartRateData.sort((a, b) => b.dateFrom.compareTo(a.dateFrom));
         latestHeartRate = double.tryParse(
           heartRateData.first.value.toString(),
         );
+        latestHeartRateDate = heartRateData.first.dateFrom;
       }
 
+      // Build payload as arrays of data points to match server `/api/sync` format
       final payload = {
-        "steps": steps ?? 0,
-        "heartRate": latestHeartRate,
-        "timestamp": now.toIso8601String(),
-        "source": "iPhone HealthKit"
+        "steps": [
+          {
+            "startDate": start.toIso8601String(),
+            "endDate": now.toIso8601String(),
+            "value": steps ?? 0,
+            "unit": "count",
+            "source": "iPhone HealthKit"
+          }
+        ],
+        "heartRate": latestHeartRate != null
+            ? [
+                {
+                  "startDate": latestHeartRateDate?.toIso8601String() ?? now.toIso8601String(),
+                  "endDate": latestHeartRateDate?.toIso8601String() ?? now.toIso8601String(),
+                  "value": latestHeartRate,
+                  "unit": "bpm",
+                  "source": "iPhone HealthKit"
+                }
+              ]
+            : []
       };
 
       setState(() {
@@ -104,7 +123,7 @@ class _HealthSenderPageState extends State<HealthSenderPage> {
       );
 
       setState(() {
-        status = "Sent! Backend status: ${response.statusCode}\n$payload";
+        status = "Sent! Backend status: ${response.statusCode}\n${response.body}";
       });
     } catch (e) {
       setState(() {
