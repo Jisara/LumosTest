@@ -7,6 +7,10 @@ workflows:
       flutter: stable
       xcode: latest
 
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.LumosHealth.Test0
+
     scripts:
       - name: Set up Flutter
         script: |
