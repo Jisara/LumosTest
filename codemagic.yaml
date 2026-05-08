@@ -8,7 +8,7 @@ workflows:
       xcode: latest
 
       ios_signing:
-        distribution_type: development
+        distribution_type: app_store
         bundle_identifier: com.LumosHealth.Test0
 
     scripts:
